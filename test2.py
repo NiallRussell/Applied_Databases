@@ -4,6 +4,7 @@ def fill_array():
 	while choice != -1:
 		array.append(choice)
 		choice = int(input("Enter a Number"))
-	print(array)
+	return array
 
-fill_array()
+array = fill_array()
+print(array)

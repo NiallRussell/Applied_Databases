@@ -30,29 +30,20 @@ def fill_array():
 	while choice != -1:
 		array.append(choice)
 		choice = int(input("Enter a Number"))
-	print(array)
+	return array
 
 
-# Write the necessary code to fill the array.
-# -1 should not be part of the array
-# The following line of code is only to allow 
-# the program to run.
-# It should be deleted when you write your
-# own code
-
-	x = 1;
 
 
 def find_gt_in_array(array):
-# Write the necessary code to get a number from the user
-# and print out all numbers in the array that are greater
-# than this number
-
-# The following line of code is only to allow 
-# the program to run.
-# It should be deleted when you write your
-# own code
-	x = 1;
+	list =[]
+	choice = int(input("Enter a Number:"))
+	for element in array:
+		if element > choice:
+			list.append(element)
+		else:
+			continue
+	print(list)
 
 
 def display_menu():
