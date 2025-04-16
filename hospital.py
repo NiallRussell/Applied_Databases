@@ -26,13 +26,14 @@ def main():
        with conn:   
             cursor = conn.cursor()
             cursor.execute(query_insert, values)
+            conn.commit()
             print("Insert Successful")
 
     except pymysql.err.IntegrityError as e:
             error_code = e.args[0]
             error_msg = str(e)
 
-            if (error_code == 1062 and "ppsn" in error_msg) or (error_code == 1452 and "doctorID" in error_msg):
+            if (error_code == 1062 and "PRIMARY" in error_msg) or (error_code == 1452 and "doctorID" in error_msg):
                  print("Existing PPSN, or non-existant DoctorID entered")
             else:
                  print("Integrity Error:", e)
