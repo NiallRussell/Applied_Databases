@@ -46,6 +46,46 @@ Film Details for {director}
                     for row in rows:
                         print(row)
                     display_menu()
+        
+        elif choice == "2":
+            nums = list(range(1,13))
+            words = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
+            valid = dict(zip(words, nums))
+
+            month = input("Enter Month:")
+            if int(month) in nums:
+                month = int(month)
+            else:
+                month = month
+
+            month_query = f'''SELECT ActorName, ActorDOB, ActorGender
+            from actor
+            WHERE month(ActorDOB) = %s'''
+
+            while month:
+                if month not in valid.values():
+                    print("Please input a valid month")
+                    month = input("Enter Month:")
+                else:
+                    if month in nums:
+                        month_param = month
+                        month = 0
+                    else:
+                        month_param = valid[month]
+                        month = 0
+                try:
+                    with conn.cursor() as cursor:
+                        cursor.execute(month_query, (month_param,))
+                        rows = cursor.fetchall()
+                except pymysql.MySQLError as err:
+                    print("Database error", err)
+                    display_menu()
+                else:
+                    for row in rows:
+                        print(row)
+                    display_menu()
+
+            
 
 
 def display_menu():

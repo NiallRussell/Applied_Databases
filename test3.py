@@ -1,14 +1,7 @@
-array2 = [4,5,6,7,2,9]
+month = 6
+nums = list(range(1,13))
+words = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
+valid = dict(zip(words, nums))
 
-def find_gt_in_array(array):
-	list =[]
-	choice = int(input("Enter a Number:"))
-	for element in array:
-		if element > choice:
-			list.append(element)
-		else:
-			continue
-	print(list)
-		
-
-find_gt_in_array(array2)
+if month not in valid.values():
+	print("no")
