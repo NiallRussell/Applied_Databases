@@ -44,7 +44,10 @@ Film Details for {director}
 -------------------------------------
                       ''')
                     for row in rows:
-                        print(row)
+                        director_name = row["DirectorName"]
+                        film_name = row["FilmName"]
+                        studio_name = row["StudioName"]
+                        print(f"{director_name}  |  {film_name}  |  {studio_name}")
                     display_menu()
         
         elif choice == "2":
@@ -53,19 +56,23 @@ Film Details for {director}
             valid = dict(zip(words, nums))
 
             month = input("Enter Month:")
-            if int(month) in nums:
+            try:
                 month = int(month)
-            else:
-                month = month
+            except ValueError:
+                month = month.lower()
 
             month_query = f'''SELECT ActorName, ActorDOB, ActorGender
             from actor
             WHERE month(ActorDOB) = %s'''
 
             while month:
-                if month not in valid.values():
+                if month not in valid.values() and month not in valid.keys():
                     print("Please input a valid month")
                     month = input("Enter Month:")
+                    if int(month) in nums:
+                        month = int(month)
+                    else:
+                        month = month.lower()
                 else:
                     if month in nums:
                         month_param = month
@@ -82,7 +89,10 @@ Film Details for {director}
                     display_menu()
                 else:
                     for row in rows:
-                        print(row)
+                        actor_name = row["ActorName"]
+                        actor_dob = row["ActorDOB"].strftime('%Y-%m-%d')
+                        actor_gender = row["ActorGender"]
+                        print(f"{actor_name}  |  {actor_dob}  |  {actor_gender}")
                     display_menu()
 
             
