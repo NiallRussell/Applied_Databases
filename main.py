@@ -1,5 +1,6 @@
 import pymysql
 import pymysql.cursors
+from datetime import datetime
 
 
 def main():
@@ -95,7 +96,55 @@ Film Details for {director}
                         print(f"{actor_name}  |  {actor_dob}  |  {actor_gender}")
                     display_menu()
 
+        elif choice == "3":
+            print(f'''Add New Actor
+                  ----------------''')
+            new_actor_id = int(input("Actor ID: "))
+            new_actor_name = input("Name: ")
+            new_actor_dob = input("DOB: ")
+            try:
+                datetime.strptime(new_actor_dob, '%Y-%m-%d')
+            except ValueError:
+                print("Please enter date in format YYYY-MM-DD")
+                continue
+            new_actor_gender = input("Gender: ")
+            new_actor_country_id = int(input("Country ID: "))
+            values = (new_actor_id, new_actor_name, new_actor_dob, new_actor_gender, new_actor_country_id)
+
+            new_actor_insert = f'''INSERT INTO actor(ActorID, ActorName, ActorDOB, ActorGender, ActorCountryID) 
+            VALUES (%s, %s, %s, %s, %s)'''
             
+            "INSERT INTO patient_table(ppsn, first_name, surname, address, doctorID) VALUES (%s, %s, %s, %s, %s)"
+
+
+            try:
+                with conn:   
+                    cursor = conn.cursor()
+                    cursor.execute(new_actor_insert, values)
+                    conn.commit()
+                    print("Insert Successful")
+                    display_menu()
+
+            except pymysql.err.IntegrityError as e:
+                print(f"Integrity error: {e}")
+                conn.rollback()
+                continue
+            
+            except ValueError as e:
+                print(f"Value error: {e}")
+                conn.rollback()
+                continue
+            
+            except pymysql.MySQLError as e:
+                print(f"Database error: {e}")
+                conn.rollback()
+                continue
+
+            except Exception as e:
+                print(f"Unexpected error: {e}")
+                conn.rollback()
+                continue
+
 
 
 def display_menu():
