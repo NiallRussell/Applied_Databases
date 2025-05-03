@@ -1,7 +1,7 @@
 import pymysql
 import pymysql.cursors
 from datetime import datetime
-
+from neo4j import GraphDatabase
 
 def main():
     conn = pymysql.connect(
@@ -126,10 +126,18 @@ Film Details for {director}
                     display_menu()
 
             except pymysql.err.IntegrityError as e:
-                print(f"Integrity error: {e}")
+                error_code = e.args[0]
+                error_msg = str(e)
+
+                if (error_code == 1062 and "Actor" in error_msg):
+                    print(f"*** ERROR *** Actor ID: {new_actor_id} already exists")
+                elif (error_code == 1452 and "Country" in error_msg):
+                    print(f"*** ERROR *** Country ID: {new_actor_country_id} does not exist")
+                else:
+                    print("Integrity Error:", e)
                 conn.rollback()
                 continue
-            
+
             except ValueError as e:
                 print(f"Value error: {e}")
                 conn.rollback()
@@ -145,6 +153,53 @@ Film Details for {director}
                 conn.rollback()
                 continue
 
+        elif choice == "4":
+            uri = "neo4j://localhost:7687"
+            neo4jDriver = GraphDatabase.driver(uri, auth=("neo4j", "neo4jneo4j"))
+
+        def married_to(tx, actorID):
+            query = "MATCH (a1:Actor{ActorID: $actorID})-[m:MARRIED_TO]-(a2:Actor) RETURN a1.ActorID, a2.ActorID, m"
+            parameter = {"actorID": actorID}
+            record = tx.run(query, parameter).single()
+            if not record:
+                print(f'''
+                      ------------
+                      This actor is not married
+                      ''')
+            else:
+                return (record["a1.ActorID"], record["a2.ActorID"])
+    
+        actor_choice = int(input("Enter Actor ID: "))
+
+        with neo4jDriver.session() as session:
+            result = session.execute_read(married_to, actor_choice)
+
+        neo4jDriver.close()
+
+        if result: 
+            actor1_id, actor2_id = result
+            
+        married_to_query = "SELECT (SELECT ActorName from actor WHERE ActorID = %s) as ActorName1, (SELECT ActorName from actor WHERE ActorID = %s) as ActorName2"
+        values = (int(actor1_id), int(actor2_id))
+
+        try:
+            with conn:   
+                cursor = conn.cursor()
+                cursor.execute(married_to_query, values)
+                results = cursor.fetchone()
+                actor1_name = results["ActorName1"]
+                actor2_name = results["ActorName2"]
+                print(f'''
+-------------
+These Actors are married:
+{actor1_id}  |  {actor1_name}
+{actor2_id}  |  {actor2_name}
+''')
+            display_menu()
+        
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+    
 
 
 def display_menu():

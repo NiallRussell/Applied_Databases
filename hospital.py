@@ -2,7 +2,6 @@ import pymysql
 import pymysql.cursors
 
 
-
 def main():
     conn = pymysql.connect(
         host ="localhost",
