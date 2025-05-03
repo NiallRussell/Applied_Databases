@@ -48,23 +48,25 @@ neo4jDriver.close()
 if result: 
     actor1_id, actor2_id = result
             
-married_to_query = "SELECT (SELECT ActorName from actor WHERE ActorID = %s) as ActorName1, (SELECT ActorName from actor WHERE ActorID = %s) as ActorName2"
-values = (int(actor1_id), int(actor2_id))
+    married_to_query = "SELECT (SELECT ActorName from actor WHERE ActorID = %s) as ActorName1, (SELECT ActorName from actor WHERE ActorID = %s) as ActorName2"
+    values = (int(actor1_id), int(actor2_id))
 
-try:
-    with conn:   
-        cursor = conn.cursor()
-        cursor.execute(married_to_query, values)
-        results = cursor.fetchone()
-        actor1_name = results["ActorName1"]
-        actor2_name = results["ActorName2"]
-        print(f'''-------------
+    try:
+        with conn:   
+            cursor = conn.cursor()
+            cursor.execute(married_to_query, values)
+            results = cursor.fetchone()
+            actor1_name = results["ActorName1"]
+            actor2_name = results["ActorName2"]
+            print(f'''-------------
               These Actors are married:
               {actor1_id}  |  {actor1_name}
 {actor2_id}  |  {actor2_name}''')
-        display_menu()
+            display_menu()
 
-except Exception as e:
-    print(f"Unexpected error: {e}")
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+else:
+    display_menu()
     
 
