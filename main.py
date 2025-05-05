@@ -127,8 +127,7 @@ def main():
 
 
                 try:
-                    with conn:   
-                        cursor = conn.cursor()
+                    with conn.cursor() as cursor:   
                         cursor.execute(new_actor_insert, values)
                         conn.commit()
                         print("Insert Successful")
@@ -138,28 +137,32 @@ def main():
                     error_code = e.args[0]
                     error_msg = str(e)
 
-                    if (error_code == 1062 and "Actor" in error_msg):
+                    if (error_code == 1062 and "PRIMARY" in error_msg):
                         print(f"*** ERROR *** Actor ID: {new_actor_id} already exists")
                     elif (error_code == 1452 and "Country" in error_msg):
                         print(f"*** ERROR *** Country ID: {new_actor_country_id} does not exist")
                     else:
                         print("Integrity Error:", e)
                     conn.rollback()
+                    display_menu()
                     continue
 
                 except ValueError as e:
                     print(f"Value error: {e}")
                     conn.rollback()
+                    display_menu()
                     continue
                 
                 except pymysql.MySQLError as e:
                     print(f"Database error: {e}")
                     conn.rollback()
+                    display_menu()
                     continue
 
                 except Exception as e:
                     print(f"Unexpected error: {e}")
                     conn.rollback()
+                    display_menu()
                     continue
 
             #View marriage
