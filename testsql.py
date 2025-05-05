@@ -26,8 +26,7 @@ def main():
             values = (newlywed_id1, newlywed_id2)
 
             try:
-                with conn:   
-                    cursor = conn.cursor()
+                with conn.cursor() as cursor:   
                     cursor.execute(id_exists_query, values)
                     results = cursor.fetchone()
                     check_id1, check_id2 = results["ActorID1"], results["ActorID2"]

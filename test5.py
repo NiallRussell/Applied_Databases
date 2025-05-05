@@ -77,16 +77,14 @@ def main():
         if newlywed_id1 == newlywed_id2:
             print("An actor cannot marry him/herself")
             continue
-        else:
-                    
+        else:    
             #Check if IDs exist
             id_exists_query = (f'''SELECT (SELECT ActorID from actor WHERE ActorID = %s) as ActorID1,
             (SELECT ActorID from actor WHERE ActorID = %s) as ActorID2''')
             values = (newlywed_id1, newlywed_id2)
 
             try:
-                with conn:   
-                    cursor = conn.cursor()
+                with conn.cursor() as cursor:   
                     cursor.execute(id_exists_query, values)
                     results = cursor.fetchone()
                     check_id1, check_id2 = results["ActorID1"], results["ActorID2"]
@@ -108,6 +106,7 @@ def main():
                 print("Database error:", e)
                 continue
             break
+                               
             
             
 
