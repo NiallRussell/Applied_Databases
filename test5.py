@@ -68,7 +68,6 @@ def main():
             tx.run(create_query, parameters)
             print(f"Actor {newlywed_id1} is now married to Actor {newlywed_id2}")
 
-    display_menu()
     #Create loop to prompt user to enter until valid entry given
     while True:
         newlywed_id1 = int(input("Enter Actor 1 ID: "))
