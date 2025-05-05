@@ -192,8 +192,7 @@ def main():
                     values = (int(actor1_id), int(actor2_id))
 
                     try:
-                        with conn:   
-                            cursor = conn.cursor()
+                        with conn.cursor() as cursor:  
                             cursor.execute(married_to_query, values)
                             results = cursor.fetchone()
                             actor1_name = results["ActorName1"]
@@ -211,6 +210,10 @@ def main():
         
                 else:
                     display_menu()
+
+                #Added this because when choice 5 was selected after choice 4 I got a database error
+                if conn.open:
+                    conn.commit()
 
             #Create marriage
             elif choice == "5":
@@ -306,13 +309,14 @@ def main():
                                 
                         except pymysql.MySQLError as e:
                             print("Database error:", e.args)
-                            conn.rollback()
                             continue
                         except Exception as e:
                             print("Unexpected error:", e.args)
-                            conn.rollback()
                             continue
                         break
+                #Added this as going from choice 5 to 6 threw an error
+                if conn.open:
+                    conn.commit()
 
             elif choice == "6":
 
