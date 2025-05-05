@@ -31,16 +31,15 @@ def main():
         a1, a2, m1, m2 = check_result["a1"], check_result["a2"], check_result["m1"], check_result["m2"]
 
         #Both actors are married
-        if m1 or m2:
-            if m1:
+        if m1 is not None or m2 is not None:
+            if m1 is not None:
                 print(f"Actor {newlywed_id1} is already married")
-            if m2:
+            if m2 is not None:
                 print(f"Actor {newlywed_id2} is already married")
-            display_menu()
             return
         
         #Neither actor is married and both already have existing nodes
-        if a1 and a2:
+        if a1 is not None and a2 is not None:
             create_query = '''MATCH (a1:Actor{ActorID:$newlywed_id1}), (a2:Actor{ActorID:$newlywed_id2}) 
                                     CREATE (a1)-[:MARRIED_TO]->(a2)'''
             tx.run(create_query, parameters)
@@ -48,7 +47,7 @@ def main():
   
 
         #Neither actor is married but only Actor 1 has an existing node
-        elif a1:
+        elif a1 is not None:
             create_query = '''MATCH (a1:Actor{ActorID:$newlywed_id1})
                                     CREATE (a2:Actor{ActorID:$newlywed_id2})-[:MARRIED_TO]->(a1)'''
             tx.run(create_query, parameters)
@@ -56,7 +55,7 @@ def main():
                     
 
         #Neither actor is married but only Actor 2 has an existing node
-        elif a2:
+        elif a2 is not None:
             create_query = '''MATCH (a2:Actor{ActorID:$newlywed_id2})
                                     CREATE (a1:Actor{ActorID:$newlywed_id1})-[:MARRIED_TO]->(a2)'''
             tx.run(create_query, parameters)

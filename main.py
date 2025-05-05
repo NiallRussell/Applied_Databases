@@ -206,6 +206,58 @@ These Actors are married:
 
         elif choice == "5":
 
+            #Create Neo4j function
+            def create_marriage(tx, newlywed_id1, newlywed_id2):
+                
+                #Check if already married
+                check_query = '''OPTIONAL MATCH (a1:Actor{ActorID: $newlywed_id1})
+                               OPTIONAL MATCH (a1)-[m1:MARRIED_TO]-()
+                               OPTIONAL MATCH (a2:Actor{ActorID: $newlywed_id2})
+                               OPTIONAL MATCH (a2)-[m2:MARRIED_TO]-()
+                               RETURN a1, a2, m1, m2'''
+                
+
+                
+                parameters = {"newlywed_id1": newlywed_id1, "newlywed_id2": newlywed_id2}
+                check_result = tx.run(check_query, parameters).single()
+                a1, a2, m1, m2 = check_result["a1"], check_result["a2"], check_result["m1"], check_result["m2"]
+
+                #Both actors are married
+                if m1 is not None or m2 is not None:
+                    if m1 is not None:
+                        print(f"Actor {newlywed_id1} is already married")
+                    if m2 is not None:
+                        print(f"Actor {newlywed_id2} is already married")
+                    return
+        
+                #Neither actor is married and both already have existing nodes
+                if a1 is not None and a2 is not None:
+                    create_query = '''MATCH (a1:Actor{ActorID:$newlywed_id1}), (a2:Actor{ActorID:$newlywed_id2}) 
+                                    CREATE (a1)-[:MARRIED_TO]->(a2)'''
+                    tx.run(create_query, parameters)
+                    print(f"Actor {newlywed_id1} is now married to Actor {newlywed_id2}")
+  
+
+                #Neither actor is married but only Actor 1 has an existing node
+                elif a1 is not None:
+                    create_query = '''MATCH (a1:Actor{ActorID:$newlywed_id1})
+                                    CREATE (a2:Actor{ActorID:$newlywed_id2})-[:MARRIED_TO]->(a1)'''
+                    tx.run(create_query, parameters)
+                    print(f"Actor {newlywed_id1} is now married to Actor {newlywed_id2}")
+                    
+                #Neither actor is married but only Actor 2 has an existing node
+                elif a2 is not None:
+                    create_query = '''MATCH (a2:Actor{ActorID:$newlywed_id2})
+                                    CREATE (a1:Actor{ActorID:$newlywed_id1})-[:MARRIED_TO]->(a2)'''
+                    tx.run(create_query, parameters)
+                    print(f"Actor {newlywed_id1} is now married to Actor {newlywed_id2}")
+
+                #Neither actor is married nor has an existing node
+                else:
+                    create_query = '''CREATE (a1:Actor{ActorID:$newlywed_id1})-[:MARRIED_TO]->(a2:Actor{ActorID:$newlywed_id2})'''
+                    tx.run(create_query, parameters)
+                    print(f"Actor {newlywed_id1} is now married to Actor {newlywed_id2}")
+
             #Create loop to prompt user to enter until valid entry given
             while True:
                 newlywed_id1 = int(input("Enter Actor 1 ID: "))
@@ -215,113 +267,39 @@ These Actors are married:
                 if newlywed_id1 == newlywed_id2:
                     print("An actor cannot marry him/herself")
                     continue
-                else:
-                    
+                else:    
                     #Check if IDs exist
                     id_exists_query = (f'''SELECT (SELECT ActorID from actor WHERE ActorID = %s) as ActorID1,
                     (SELECT ActorID from actor WHERE ActorID = %s) as ActorID2''')
                     values = (newlywed_id1, newlywed_id2)
 
                     try:
-                        with conn:   
-                            cursor = conn.cursor()
+                        with conn.cursor() as cursor:   
                             cursor.execute(id_exists_query, values)
                             results = cursor.fetchone()
-                            if not results:
+                            check_id1, check_id2 = results["ActorID1"], results["ActorID2"]
+
+                            #If IDs don't exist, inform user and prompt input again
+                            if check_id1 is None and check_id2 is None:
                                 print("Neither Actor IDs exist")
                                 continue
-                            else:
-                                break
+                            if check_id1 is None:
+                                print(f"Actor ID {newlywed_id1} does not exist")
+                                continue
+                            if check_id2 is None:
+                                print(f"Actor ID {newlywed_id2} does not exist")
+                                continue
+                            # Execute neo4j query if IDs exist in SQL
+                            with neo4jDriver.session() as session:
+                                session.execute_write(create_marriage, newlywed_id1, newlywed_id2)
+                            neo4jDriver.close()
+                            display_menu()
                                
-                    except pymysql.err.IntegrityError as e:
-                        error_code = e.args[0]
-                        error_msg = str(e)
-
-                        if (error_code == 1452 and "ActorID1" in error_msg):
-                            print(f"Actor {newlywed_id1} does not exist")
-                            continue
-                        elif (error_code == 1452 and "ActorID2" in error_msg):
-                            print(f"Actor {newlywed_id2} does not exist")
-                            continue
-                        else:
-                            print("Integrity Error:", e)
-                            continue
+                    except pymysql.MySQLError as e:
+                        print("Database error:", e)
+                        continue
+                    break
             
-            def create_marriage(tx, newlywed_id1, newlywed_id2):
-                
-                #Check if already married
-                check_query = '''MATCH (a1:Actor{ActorID: $newlywed_id1})
-                               OPTIONAL MATCH (a1)-[m1:MARRIED_TO]-()
-                               MATCH (a2:Actor{ActorID: $newlywed_id2})
-                               OPTIONAL MATCH (a2)-[m2:MARRIED_TO]-()
-                               RETURN a1, a2, m1, m2
-                               '''
-                
-
-                
-                parameters = {"newlywed_id1": newlywed_id1, "newlywed_id2": newlywed_id2}
-                check_result = tx.run(check_query, parameters).single()
-                a1, a2, m1, m2 = check_result
-                #Both actors are married
-                if m1 and m2:
-                    print(f"Actor {newlywed_id1} is already married")
-                    print(f"Actor {newlywed_id2} is already married")
-                    display_menu()
-
-                #Actor 1 is married
-                elif m1:
-                    print(f"Actor {newlywed_id1} is already married")
-
-                #Actor 2 is married
-                elif m2:
-                    print(f"Actor {newlywed_id2} is already married")
-
-                #Neither actor is married and both already have existing nodes
-                elif a1 and a2:
-                    create_query = '''MATCH (a1:Actor{ActorID:$newlywed_id1}), (a2:Actor{ActorID:$newlywed_id2}) 
-                                    CREATE (a1)-[:MARRIED_TO]->(a2)'''
-  
-                    tx.run(create_query, parameters)
-                    with neo4jDriver.session() as session:
-                        session.execute_write(create_marriage, newlywed_id1, newlywed_id2)
-                        print(f"Actor {newlywed_id1} is now married to Actor {newlywed_id2}")
-                    neo4jDriver.close()
-                    display_menu()
-
-                #Neither actor is married but only Actor 1 has an existing node
-                elif a1:
-                    create_query = '''MATCH (a1:Actor{ActorID:$newlywed_id1})
-                                    CREATE (a2:Actor{ActorID:$newlywed_id2}-[:MARRIED_TO]->(a1)'''
-                    
-                    tx.run(create_query, parameters)
-                    with neo4jDriver.session() as session:
-                        session.execute_write(create_marriage, newlywed_id1, newlywed_id2)
-                        print(f"Actor {newlywed_id1} is now married to Actor {newlywed_id2}")
-                    neo4jDriver.close()
-                    display_menu()
-
-                #Neither actor is married but only Actor 2 has an existing node
-                elif a2:
-                    create_query = '''MATCH (a2:Actor{ActorID:$newlywed_id2})
-                                    CREATE (a1:Actor{ActorID:$newlywed_id1}-[:MARRIED_TO]->(a2)'''
-                    
-                    tx.run(create_query, parameters)
-                    with neo4jDriver.session() as session:
-                        session.execute_write(create_marriage, newlywed_id1, newlywed_id2)
-                        print(f"Actor {newlywed_id1} is now married to Actor {newlywed_id2}")
-                    neo4jDriver.close()
-                    display_menu()
-
-                #Neither actor is married nor has an existing node
-                else:
-                    create_query = '''CREATE (a1:Actor{ActorID:$newlywed_id1})-[:MARRIED_TO]->(a2:Actor{ActorID:$newlywed_id2})'''
-
-                    tx.run(create_query, parameters)
-                    with neo4jDriver.session() as session:
-                        session.execute_write(create_marriage, newlywed_id1, newlywed_id2)
-                        print(f"Actor {newlywed_id1} is now married to Actor {newlywed_id2}")
-                    neo4jDriver.close()
-                    display_menu()
 
 
 def display_menu():
