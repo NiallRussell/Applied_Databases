@@ -48,8 +48,8 @@ def main():
                         display_menu()
                     else:
                         print(f'''
-    Film Details for {director}
-    -------------------------------------
+Film Details for {director}
+-----------------------------
                         ''')
                         for row in rows:
                             director_name = row["DirectorName"]
@@ -106,8 +106,10 @@ def main():
 
             #Add new actor
             elif choice == "3":
-                print(f'''Add New Actor
-                    ----------------''')
+                print(f'''
+Add New Actor
+----------------
+                      ''')
                 new_actor_id = int(input("Actor ID: "))
                 new_actor_name = input("Name: ")
                 new_actor_dob = input("DOB: ")
@@ -174,8 +176,8 @@ def main():
                     record = tx.run(query, parameter).single()
                     if not record:
                         print(f'''
-                        ------------
-                        This actor is not married
+------------
+This actor is not married
                         ''')
                     else:
                         return (record["a1.ActorID"], record["a2.ActorID"])
@@ -198,11 +200,11 @@ def main():
                             actor1_name = results["ActorName1"]
                             actor2_name = results["ActorName2"]
                             print(f'''
-    -------------
-    These Actors are married:
-    {actor1_id}  |  {actor1_name}
-    {actor2_id}  |  {actor2_name}
-    ''')
+-------------
+These Actors are married:
+{actor1_id}  |  {actor1_name}
+{actor2_id}  |  {actor2_name}
+                            ''')
                         display_menu()
             
                     except Exception as e:
@@ -346,19 +348,19 @@ def main():
 
 def display_menu():
         print(f'''
-          MoviesDB
-          ---------
+MoviesDB
+---------
           
-          MENU
-          ====
-          1 - View Directors and Films
-          2 - View Actors by Month of Birth
-          3 - Add New Actor
-          4 - View Married Actors
-          5 - Add Actor Marriage
-          6 - View Studios
-          x - Exit Application
-          ''')
+MENU
+====
+1 - View Directors and Films
+2 - View Actors by Month of Birth
+3 - Add New Actor
+4 - View Married Actors
+5 - Add Actor Marriage
+6 - View Studios
+x - Exit Application
+        ''')
 
 
 if __name__ == "__main__":
