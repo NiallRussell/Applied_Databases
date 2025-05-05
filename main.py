@@ -302,12 +302,39 @@ def main():
                                 # Execute neo4j query if IDs exist in SQL
                                 with neo4jDriver.session() as session:
                                     session.execute_write(create_marriage, newlywed_id1, newlywed_id2)
-                                display_menu()
+                            display_menu()
                                 
                         except pymysql.MySQLError as e:
-                            print("Database error:", e)
+                            print("Database error:", e.args)
+                            conn.rollback()
+                            continue
+                        except Exception as e:
+                            print("Unexpected error:", e.args)
+                            conn.rollback()
                             continue
                         break
+
+            elif choice == "6":
+
+                with conn.cursor() as cursor:
+                    cursor.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ")
+                    conn.begin()
+
+                    #Retrieve only studios created at the time of connection or before
+                    studio_query = "SELECT StudioID, StudioName from studio ORDER BY StudioID ASC"
+
+                    cursor.execute(studio_query)
+                    results = cursor.fetchall()
+                    print("Studio ID  |  Studio Name")
+                    for row in results:
+                        print(row["StudioID"], row["StudioName"], sep= "  |  ")
+                    display_menu()
+            
+            elif choice == "x":
+                break
+            else:
+                display_menu()
+
     finally:
         conn.close()
         neo4jDriver.close()       
