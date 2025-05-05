@@ -229,6 +229,7 @@ def main():
                     
                     parameters = {"newlywed_id1": newlywed_id1, "newlywed_id2": newlywed_id2}
                     check_result = tx.run(check_query, parameters).single()
+
                     a1, a2, m1, m2 = check_result["a1"], check_result["a2"], check_result["m1"], check_result["m2"]
 
                     #Both actors are married
