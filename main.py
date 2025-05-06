@@ -344,9 +344,11 @@ These Actors are married:
 
                 def end_marriage(tx, divorcee1_id):
 
+                    #Check if actor is actually married
                     check_query = '''MATCH (a1:Actor{ActorID: $divorcee1_id})-[m:MARRIED_TO]-(a2)
                                 RETURN a2.ActorID as divorcee2_id, m'''
                     
+                    #Create divorce relationship
                     divorce_query = '''MATCH (a1:Actor{ActorID: $divorcee1_id})-
                     [m:MARRIED_TO]-(a2) 
                     DELETE m
@@ -354,17 +356,22 @@ These Actors are married:
                     '''
     
                     parameter = {"divorcee1_id": divorcee1_id}
-                    check_results = tx.run(check_query, parameter)
+
+                    check_results = tx.run(check_query, parameter).single()
                     m = check_results["m"]
+
+                    #If actor is married, remove married relationship and create divorced relationship
                     if m is None:
                         print("This actor is not married")
                     else:
-                        results = tx.run(divorce_query, parameter)
+                        results = tx.run(divorce_query, parameter).single()
                         divorcee2_id = check_results["divorcee2_id"]
+
+                        #Retieve second divorcee's name from SQL
                         divorcee2_query = "SELECT ActorName from actor WHERE ActorID = %s"
                         try:
                             with conn.cursor() as cursor:
-                                cursor.execute(divorcee2_query, (f"%{divorcee2_id}%"))
+                                cursor.execute(divorcee2_query, (f"{divorcee2_id}"))
                                 results = cursor.fetchone()
                                 divorcee2_name = results["ActorName"]
                         except pymysql.MySQLError as e:
@@ -374,11 +381,14 @@ These Actors are married:
                         if conn.open:
                             conn.commit()
 
+                #Check SQL for Actor ID
                 divorcee_id_query = "SELECT ActorID from actor WHERE ActorName = %s"
                 try:
                     with conn.cursor() as cursor:
                         cursor.execute(divorcee_id_query, (f"{divorcee1_name}"))
                         results = cursor.fetchone()
+                        
+                        #if Actor Name is in SQL retrieve Actor ID and write Neo4j query with it
                         if results["ActorID"] is not None:
                             divorcee1_id = results["ActorID"]
                             with neo4jDriver.session() as session:
@@ -391,6 +401,7 @@ These Actors are married:
 
                 if conn.open:
                     conn.commit()
+                display_menu()
 
             elif choice == "x":
                 break
@@ -415,6 +426,7 @@ MENU
 4 - View Married Actors
 5 - Add Actor Marriage
 6 - View Studios
+7 - Divorce Actors
 x - Exit Application
         ''')
 
