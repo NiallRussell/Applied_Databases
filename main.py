@@ -115,6 +115,7 @@ Add New Actor
                 new_actor_id = int(input("Actor ID: "))
                 new_actor_name = input("Name: ")
                 new_actor_dob = input("DOB: ")
+                #Check date format and reprompt input if incorrect
                 try:
                     datetime.strptime(new_actor_dob, '%Y-%m-%d')
                 except ValueError:
@@ -124,11 +125,9 @@ Add New Actor
                 new_actor_country_id = int(input("Country ID: "))
                 values = (new_actor_id, new_actor_name, new_actor_dob, new_actor_gender, new_actor_country_id)
 
+                #SQL query
                 new_actor_insert = f'''INSERT INTO actor(ActorID, ActorName, ActorDOB, ActorGender, ActorCountryID) 
                 VALUES (%s, %s, %s, %s, %s)'''
-                
-                "INSERT INTO patient_table(ppsn, first_name, surname, address, doctorID) VALUES (%s, %s, %s, %s, %s)"
-
 
                 try:
                     with conn.cursor() as cursor:   
@@ -141,12 +140,14 @@ Add New Actor
                     error_code = e.args[0]
                     error_msg = str(e)
 
+                    #Check for existing actor ID or nonexistent country ID
                     if (error_code == 1062 and "PRIMARY" in error_msg):
                         print(f"*** ERROR *** Actor ID: {new_actor_id} already exists")
                     elif (error_code == 1452 and "Country" in error_msg):
                         print(f"*** ERROR *** Country ID: {new_actor_country_id} does not exist")
                     else:
                         print(f"Integrity Error: {e}")
+                    #Rollback any changes made
                     conn.rollback()
                     display_menu()
                     continue
@@ -171,7 +172,7 @@ Add New Actor
 
             #View marriage
             elif choice == "4":
-
+                #Neo4J function
                 def married_to(tx, actorID):
                     query = "MATCH (a1:Actor{ActorID: $actorID})-[m:MARRIED_TO]-(a2:Actor) RETURN a1.ActorID, a2.ActorID, m"
                     parameter = {"actorID": actorID}
@@ -242,9 +243,9 @@ These Actors are married:
                     #Both actors are married
                     if m1 is not None or m2 is not None:
                         if m1 is not None:
-                            print(f"Actor {newlywed_name1} is already married")
+                            print(f"{newlywed_name1} is already married")
                         if m2 is not None:
-                            print(f"Actor {newlywed_name2} is already married")
+                            print(f"{newlywed_name2} is already married")
                         return
             
                     #Neither actor is married and both already have existing nodes
@@ -252,7 +253,7 @@ These Actors are married:
                         create_query = '''MATCH (a1:Actor{ActorID:$newlywed_id1}), (a2:Actor{ActorID:$newlywed_id2}) 
                                         CREATE (a1)-[:MARRIED_TO]->(a2)'''
                         tx.run(create_query, parameters)
-                        print(f"Actor {newlywed_name1} is now married to Actor {newlywed_name2}")
+                        print(f"{newlywed_name1} is now married to {newlywed_name2}")
     
 
                     #Neither actor is married but only Actor 1 has an existing node
@@ -260,20 +261,20 @@ These Actors are married:
                         create_query = '''MATCH (a1:Actor{ActorID:$newlywed_id1})
                                         CREATE (a2:Actor{ActorID:$newlywed_id2})-[:MARRIED_TO]->(a1)'''
                         tx.run(create_query, parameters)
-                        print(f"Actor {newlywed_name1} is now married to Actor {newlywed_name2}")
+                        print(f"{newlywed_name1} is now married to {newlywed_name2}")
                         
                     #Neither actor is married but only Actor 2 has an existing node
                     elif a2 is not None:
                         create_query = '''MATCH (a2:Actor{ActorID:$newlywed_id2})
                                         CREATE (a1:Actor{ActorID:$newlywed_id1})-[:MARRIED_TO]->(a2)'''
                         tx.run(create_query, parameters)
-                        print(f"Actor {newlywed_name1} is now married to Actor {newlywed_name2}")
+                        print(f"{newlywed_name1} is now married to {newlywed_name2}")
 
                     #Neither actor is married nor has an existing node
                     else:
                         create_query = '''CREATE (a1:Actor{ActorID:$newlywed_id1})-[:MARRIED_TO]->(a2:Actor{ActorID:$newlywed_id2})'''
                         tx.run(create_query, parameters)
-                        print(f"Actor {newlywed_name1} is now married to Actor {newlywed_name2}")
+                        print(f"{newlywed_name1} is now married to {newlywed_name2}")
 
                 #Create loop to prompt user to enter until valid entry given
                 while True:
@@ -330,10 +331,10 @@ These Actors are married:
 
                 try:
                     with conn.cursor() as cursor:
+                        #Set transaction isolation level to repeatable read to ensure no entries made after entering this choice will be presented
                         cursor.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ")
                         conn.begin()
 
-                        #Retrieve only studios created at the time of connection or before
                         studio_query = "SELECT StudioID, StudioName from studio ORDER BY StudioID ASC"
 
                         cursor.execute(studio_query)
@@ -347,8 +348,10 @@ These Actors are married:
             
             #End marriage/create divorce
             elif choice == "7":
+
                 divorcee1_name = input("Enter name of divorced actor: ")
 
+                #Create Neo4j function
                 def end_marriage(tx, divorcee1_id):
 
                     #Check if actor is actually married
@@ -365,16 +368,16 @@ These Actors are married:
                     parameter = {"divorcee1_id": divorcee1_id}
 
                     check_results = tx.run(check_query, parameter).single()
-                    m = check_results["m"]
 
-                    #If actor is married, remove married relationship and create divorced relationship
-                    if m is None:
+
+                    #If actor is married, remove married relationship and create divorced relationship. If not married, inform user
+                    if check_results is None:
                         print("This actor is not married")
                     else:
                         results = tx.run(divorce_query, parameter).single()
                         divorcee2_id = check_results["divorcee2_id"]
 
-                        #Retieve second divorcee's name from SQL
+                        #Retrieve second divorcee's name from SQL
                         divorcee2_query = "SELECT ActorName from actor WHERE ActorID = %s"
                         try:
                             with conn.cursor() as cursor:
@@ -383,8 +386,9 @@ These Actors are married:
                                 divorcee2_name = results["ActorName"]
                         except pymysql.MySQLError as e:
                             print(f"Unexpected error: {e}")
+                        else:
+                            print(f"{divorcee1_name} and {divorcee2_name} are now divorced")
 
-                        print(f"{divorcee1_name} and {divorcee2_name} are now divorced")
                         if conn.open:
                             conn.commit()
 
@@ -395,7 +399,7 @@ These Actors are married:
                         cursor.execute(divorcee_id_query, (f"{divorcee1_name}"))
                         results = cursor.fetchone()
                         
-                        #if Actor Name is in SQL retrieve Actor ID and write Neo4j query with it
+                        #If Actor Name is in SQL retrieve Actor ID and write Neo4j query with it
                         if results["ActorID"] is not None:
                             divorcee1_id = results["ActorID"]
                             with neo4jDriver.session() as session:
@@ -410,11 +414,15 @@ These Actors are married:
                     conn.commit()
                 display_menu()
 
+            #Close the programme
             elif choice == "x":
                 break
+
+            #Any other input displays the menu again and reprompts input
             else:
                 display_menu()
 
+    #Close the connections
     finally:
         conn.close()
         neo4jDriver.close()       
