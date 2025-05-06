@@ -322,20 +322,76 @@ These Actors are married:
 
             elif choice == "6":
 
-                with conn.cursor() as cursor:
-                    cursor.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ")
-                    conn.begin()
+                try:
+                    with conn.cursor() as cursor:
+                        cursor.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ")
+                        conn.begin()
 
-                    #Retrieve only studios created at the time of connection or before
-                    studio_query = "SELECT StudioID, StudioName from studio ORDER BY StudioID ASC"
+                        #Retrieve only studios created at the time of connection or before
+                        studio_query = "SELECT StudioID, StudioName from studio ORDER BY StudioID ASC"
 
-                    cursor.execute(studio_query)
-                    results = cursor.fetchall()
-                    print("Studio ID  |  Studio Name")
-                    for row in results:
-                        print(row["StudioID"], row["StudioName"], sep= "  |  ")
-                    display_menu()
-            
+                        cursor.execute(studio_query)
+                        results = cursor.fetchall()
+                        print("Studio ID  |  Studio Name")
+                        for row in results:
+                            print(row["StudioID"], row["StudioName"], sep= "  |  ")
+                        display_menu()
+                except pymysql.MySQLError as e:
+                    print(f"Unexpected error: {e}")
+
+            elif choice == "7":
+                divorcee1_name = input("Enter name of divorced actor: ")
+
+                def end_marriage(tx, divorcee_id):
+
+                    check_query = '''MATCH (a1:Actor{ActorID: $divorcee_id}-[m:MARRIED_TO]-(a2)
+                                RETURN a2.ActorID as divorcee2_id, m'''
+                    
+                    divorce_query = f'''MATCH (a1:Actor {ActorID: $divorcee1_id})-
+                    [m:MARRIED_TO]-(a2) 
+                    DELETE m
+                    CREATE (a1)-[:DIVORCED_FROM]->(a2)
+                    '''
+    
+                    parameter = {"divorcee_id": divorcee_id}
+                    check_results = tx.run(check_query, parameter)
+                    m = check_results["m"]
+                    if m is None:
+                        print("This actor is not married")
+                    else:
+                        results = tx.run(divorce_query, parameter)
+                        divorcee2_id = check_results["divorcee2_id"]
+                        divorcee2_query = "SELECT ActorName from actor WHERE ActorID = %s"
+                        try:
+                            with conn.cursor() as cursor:
+                                cursor.execute(divorcee2_query, (f"%{divorcee2_id}%"))
+                                results = cursor.fetchone()
+                                divorcee2_name = results["ActorName"]
+                        except pymysql.MySQLError as e:
+                            print(f"Unexpected error: {e}")
+
+                        print(f"{divorcee1_name} and {divorcee2_name} are now divorced")
+                        if conn.open:
+                            conn.commit()
+
+                divorcee_id_query = "SELECT ActorID from actor WHERE ActorName = %s"
+                try:
+                    with conn.cursor as cursor:
+                        cursor.execute(divorcee_id_query, (f"%{divorcee1_name}%"))
+                        results = cursor.fetchone()
+                        if results["ActorID"] is not None:
+                            divorcee_id = results["ActorID"]
+                            with neo4jDriver.session() as session:
+                                session.execute_write(end_marriage, divorcee_id)
+                        else:
+                            print("This actor is not in the database")
+                except pymysql.MySQLError as e:
+                    print(f"Unexpected error: {e}")
+                    continue
+
+                if conn.open:
+                    conn.commit()
+
             elif choice == "x":
                 break
             else:
