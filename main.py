@@ -342,18 +342,18 @@ These Actors are married:
             elif choice == "7":
                 divorcee1_name = input("Enter name of divorced actor: ")
 
-                def end_marriage(tx, divorcee_id):
+                def end_marriage(tx, divorcee1_id):
 
-                    check_query = '''MATCH (a1:Actor{ActorID: $divorcee_id}-[m:MARRIED_TO]-(a2)
+                    check_query = '''MATCH (a1:Actor{ActorID: $divorcee1_id})-[m:MARRIED_TO]-(a2)
                                 RETURN a2.ActorID as divorcee2_id, m'''
                     
-                    divorce_query = f'''MATCH (a1:Actor {ActorID: $divorcee1_id})-
+                    divorce_query = '''MATCH (a1:Actor{ActorID: $divorcee1_id})-
                     [m:MARRIED_TO]-(a2) 
                     DELETE m
                     CREATE (a1)-[:DIVORCED_FROM]->(a2)
                     '''
     
-                    parameter = {"divorcee_id": divorcee_id}
+                    parameter = {"divorcee1_id": divorcee1_id}
                     check_results = tx.run(check_query, parameter)
                     m = check_results["m"]
                     if m is None:
@@ -376,13 +376,13 @@ These Actors are married:
 
                 divorcee_id_query = "SELECT ActorID from actor WHERE ActorName = %s"
                 try:
-                    with conn.cursor as cursor:
-                        cursor.execute(divorcee_id_query, (f"%{divorcee1_name}%"))
+                    with conn.cursor() as cursor:
+                        cursor.execute(divorcee_id_query, (f"{divorcee1_name}"))
                         results = cursor.fetchone()
                         if results["ActorID"] is not None:
-                            divorcee_id = results["ActorID"]
+                            divorcee1_id = results["ActorID"]
                             with neo4jDriver.session() as session:
-                                session.execute_write(end_marriage, divorcee_id)
+                                session.execute_write(end_marriage, divorcee1_id)
                         else:
                             print("This actor is not in the database")
                 except pymysql.MySQLError as e:
