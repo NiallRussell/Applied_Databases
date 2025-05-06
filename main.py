@@ -4,7 +4,7 @@ from datetime import datetime
 from neo4j import GraphDatabase
 
 def main():
-    #try block to manage connections
+    #Try block to manage connections
     try:
         conn = pymysql.connect(
             host ="localhost",
@@ -64,45 +64,47 @@ Film Details for {director}
                 words = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
                 valid = dict(zip(words, nums))
 
-                month = input("Enter Month:")
-                try:
-                    month = int(month)
-                except ValueError:
-                    month = month.lower()
-
+                #SQL query
                 month_query = f'''SELECT ActorName, ActorDOB, ActorGender
                 from actor
                 WHERE month(ActorDOB) = %s'''
 
-                while month:
+                #Determine if input is valid. While loop to reprompt input
+                while True:
+                    month = input("Enter Month:")
+                
+                    #If user enters an integer convert to integer type. If they enter a string, lower it to compare to list
+                    try:
+                        month = int(month)
+                    except ValueError:
+                        month = month.lower()
+                    
+                    #Check if input in dictionary
                     if month not in valid.values() and month not in valid.keys():
                         print("Please input a valid month")
-                        month = input("Enter Month:")
-                        if int(month) in nums:
-                            month = int(month)
-                        else:
-                            month = month.lower()
+                        continue
                     else:
                         if month in nums:
                             month_param = month
-                            month = 0
+                            break
                         else:
                             month_param = valid[month]
-                            month = 0
-                    try:
-                        with conn.cursor() as cursor:
-                            cursor.execute(month_query, (month_param,))
-                            rows = cursor.fetchall()
-                    except pymysql.MySQLError as err:
-                        print("Database error", err)
-                        display_menu()
-                    else:
-                        for row in rows:
-                            actor_name = row["ActorName"]
-                            actor_dob = row["ActorDOB"].strftime('%Y-%m-%d')
-                            actor_gender = row["ActorGender"]
-                            print(f"{actor_name}  |  {actor_dob}  |  {actor_gender}")
-                        display_menu()
+                            break
+
+                try:
+                    with conn.cursor() as cursor:
+                        cursor.execute(month_query, (month_param,))
+                        rows = cursor.fetchall()
+                except pymysql.MySQLError as err:
+                    print("Database error", err)
+                    display_menu()
+                else:
+                    for row in rows:
+                        actor_name = row["ActorName"]
+                        actor_dob = row["ActorDOB"].strftime('%Y-%m-%d')
+                        actor_gender = row["ActorGender"]
+                        print(f"{actor_name}  |  {actor_dob}  |  {actor_gender}")
+                    display_menu()
 
             #Add new actor
             elif choice == "3":
@@ -144,7 +146,7 @@ Add New Actor
                     elif (error_code == 1452 and "Country" in error_msg):
                         print(f"*** ERROR *** Country ID: {new_actor_country_id} does not exist")
                     else:
-                        print("Integrity Error:", e)
+                        print(f"Integrity Error: {e}")
                     conn.rollback()
                     display_menu()
                     continue
@@ -221,7 +223,7 @@ These Actors are married:
             elif choice == "5":
 
                 #Create Neo4j function
-                def create_marriage(tx, newlywed_id1, newlywed_id2):
+                def create_marriage(tx, newlywed_id1, newlywed_id2, newlywed_name1, newlywed_name2):
                     
                     #Check if already married
                     check_query = '''OPTIONAL MATCH (a1:Actor{ActorID: $newlywed_id1})
@@ -240,9 +242,9 @@ These Actors are married:
                     #Both actors are married
                     if m1 is not None or m2 is not None:
                         if m1 is not None:
-                            print(f"Actor {newlywed_id1} is already married")
+                            print(f"Actor {newlywed_name1} is already married")
                         if m2 is not None:
-                            print(f"Actor {newlywed_id2} is already married")
+                            print(f"Actor {newlywed_name2} is already married")
                         return
             
                     #Neither actor is married and both already have existing nodes
@@ -250,7 +252,7 @@ These Actors are married:
                         create_query = '''MATCH (a1:Actor{ActorID:$newlywed_id1}), (a2:Actor{ActorID:$newlywed_id2}) 
                                         CREATE (a1)-[:MARRIED_TO]->(a2)'''
                         tx.run(create_query, parameters)
-                        print(f"Actor {newlywed_id1} is now married to Actor {newlywed_id2}")
+                        print(f"Actor {newlywed_name1} is now married to Actor {newlywed_name2}")
     
 
                     #Neither actor is married but only Actor 1 has an existing node
@@ -258,20 +260,20 @@ These Actors are married:
                         create_query = '''MATCH (a1:Actor{ActorID:$newlywed_id1})
                                         CREATE (a2:Actor{ActorID:$newlywed_id2})-[:MARRIED_TO]->(a1)'''
                         tx.run(create_query, parameters)
-                        print(f"Actor {newlywed_id1} is now married to Actor {newlywed_id2}")
+                        print(f"Actor {newlywed_name1} is now married to Actor {newlywed_name2}")
                         
                     #Neither actor is married but only Actor 2 has an existing node
                     elif a2 is not None:
                         create_query = '''MATCH (a2:Actor{ActorID:$newlywed_id2})
                                         CREATE (a1:Actor{ActorID:$newlywed_id1})-[:MARRIED_TO]->(a2)'''
                         tx.run(create_query, parameters)
-                        print(f"Actor {newlywed_id1} is now married to Actor {newlywed_id2}")
+                        print(f"Actor {newlywed_name1} is now married to Actor {newlywed_name2}")
 
                     #Neither actor is married nor has an existing node
                     else:
                         create_query = '''CREATE (a1:Actor{ActorID:$newlywed_id1})-[:MARRIED_TO]->(a2:Actor{ActorID:$newlywed_id2})'''
                         tx.run(create_query, parameters)
-                        print(f"Actor {newlywed_id1} is now married to Actor {newlywed_id2}")
+                        print(f"Actor {newlywed_name1} is now married to Actor {newlywed_name2}")
 
                 #Create loop to prompt user to enter until valid entry given
                 while True:
@@ -283,16 +285,19 @@ These Actors are married:
                         print("An actor cannot marry him/herself")
                         continue
                     else:    
-                        #Check if IDs exist
+                        #Check if IDs exist and retrieve names for printing later
                         id_exists_query = (f'''SELECT (SELECT ActorID from actor WHERE ActorID = %s) as ActorID1,
-                        (SELECT ActorID from actor WHERE ActorID = %s) as ActorID2''')
-                        values = (newlywed_id1, newlywed_id2)
+                                           (SELECT ActorName from actor WHERE ActorID = %s) as ActorName1,
+                                           (SELECT ActorID from actor WHERE ActorID = %s) as ActorID2,
+                                           (SELECT ActorName from actor WHERE ActorID = %s) as ActorName2''')
+                        values = (newlywed_id1, newlywed_id1, newlywed_id2, newlywed_id2)
 
                         try:
                             with conn.cursor() as cursor:   
                                 cursor.execute(id_exists_query, values)
                                 results = cursor.fetchone()
                                 check_id1, check_id2 = results["ActorID1"], results["ActorID2"]
+                                newlywed_name1, newlywed_name2 = results["ActorName1"], results["ActorName2"]
 
                                 #If IDs don't exist, inform user and prompt input again
                                 if check_id1 is None and check_id2 is None:
@@ -306,20 +311,21 @@ These Actors are married:
                                     continue
                                 # Execute neo4j query if IDs exist in SQL
                                 with neo4jDriver.session() as session:
-                                    session.execute_write(create_marriage, newlywed_id1, newlywed_id2)
+                                    session.execute_write(create_marriage, newlywed_id1, newlywed_id2, newlywed_name1, newlywed_name2)
                             display_menu()
                                 
                         except pymysql.MySQLError as e:
-                            print("Database error:", e.args)
+                            print(f"Database error: {e}")
                             continue
                         except Exception as e:
-                            print("Unexpected error:", e.args)
+                            print(f"Unexpected error: {e}")
                             continue
                         break
                 #Added this as going from choice 5 to 6 threw an error
                 if conn.open:
                     conn.commit()
 
+            # View Studios
             elif choice == "6":
 
                 try:
@@ -338,7 +344,8 @@ These Actors are married:
                         display_menu()
                 except pymysql.MySQLError as e:
                     print(f"Unexpected error: {e}")
-
+            
+            #End marriage/create divorce
             elif choice == "7":
                 divorcee1_name = input("Enter name of divorced actor: ")
 
